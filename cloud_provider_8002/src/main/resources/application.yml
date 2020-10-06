@@ -1,0 +1,41 @@
+
+server:
+  port: 8002
+spring:
+  application:
+    name: cloud-paymen-service
+
+  datasource:
+    #    url: jdbc:mysql://localhost:3306/db2019?characterEncoding=utf-8&serverTimezone=GMT%2B8&useSSL=false
+    #    username: root
+    #    password: 123
+    url: jdbc:mysql://rm-2ze3ab5f9bgcbx9m10o.mysql.rds.aliyuncs.com:3306/db2019?characterEncoding=utf-8&serverTimezone=GMT%2B8&useSSL=false
+    username: liu
+    password: 03145215LL
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*/*Mapper.xml
+  global-config:
+    db-config:
+      id-type: auto
+      #      \u8868\u524D\u7F00
+      #      tablePrefix: t_
+      #      \u903B\u8F91\u5220\u9664\u503C
+      logic-delete-field: dataStatus  #\u5168\u5C40\u903B\u8F91\u5220\u9664\u5B57\u6BB5\u503C 3.3.0\u5F00\u59CB\u652F\u6301\uFF0C\u8BE6\u60C5\u770B\u4E0B\u9762\u3002
+      logic-delete-value: 1 # \u903B\u8F91\u5DF2\u5220\u9664\u503C(\u9ED8\u8BA4\u4E3A 1)
+      logic-not-delete-value: 0 # \u903B\u8F91\u672A\u5220\u9664\u503C(\u9ED8\u8BA4\u4E3A 0)
+eureka:
+  client:
+    #    \u8868\u793A\u662F\u5426\u5C06\u81EA\u5DF1\u6CE8\u518C\u8FDBEurekaServer\u4E2D \u9ED8\u8BA4\u4E3Atrue
+    register-with-eureka: true
+    #    \u662F\u5426\u4ECEEurekaServer\u4E2D\u6293\u53D6\u5DF2\u6709\u7684\u6CE8\u518C\u4FE1\u606F,\u9ED8\u8BA4\u4E3Atrue \u5355\u70B9\u65E0\u6240\u8C13,\u96C6\u7FA4\u4E0D\u8BB8\u8BBE\u7F6E\u4E3Atrue\u624D\u80FD\u914D\u5408ribbon\u4F7F\u7528\u8D1F\u8F7D\u5747\u8861
+    fetch-registry: true
+    service-url:
+      #      defaultZone: http://localhost:7001/eureka/
+      defaultZone: http://eureka7001.com:7001/eureka/,http://eureka7002.com:7002/eureka/
+  instance:
+    instance-id: payment8002
+#    \u8BBF\u95EE\u8DEF\u5F84\u53EF\u4EE5\u663E\u793AIP
+    prefer-ip-address: true
