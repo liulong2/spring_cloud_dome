@@ -203,4 +203,250 @@ public Object discovery() {
 #    服务端在收到最后一次心跳后等待时间上线,单位为秒(默认90秒),超时将剔除服务
     lease-expiration-duration-in-seconds: 2
 ```
+20201007学习
+## zookeeper
+
+依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-zookeeper-discovery</artifactId>
+</dependency>
+```
+
+yml配置 消费者和提供者一样的配置,多集群的时候connect-string配置多个,用逗号分隔
+
+```yaml
+server:
+  port: 8004
+spring:
+  application:
+    name: cloud-provider-payment
+  cloud:
+    zookeeper:
+      connect-string: 59.110.64.192:2181
+```
+
+启动类注解
+
+```java
+EnableDiscoveryClient
+```
+
+解决jar包冲突
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-zookeeper-discovery -->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-zookeeper-discovery</artifactId>
+    <!--排除zk3.5.3-->
+    <exclusions>
+        <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+<!--添加zk 3.4,9版本-->
+<!-- https://mvnrepository.com/artifact/org.apache.zookeeper/zookeeper -->
+<dependency>
+    <groupId>org.apache.zookeeper</groupId>
+    <artifactId>zookeeper</artifactId>
+    <version>3.4.9</version>
+</dependency>
+```
+
+注册进的是临时节点
+
+调用
+
+```java
+public static final String INVOKE_URL = "http://cloud-provider-payment";
+```
+
+## consul
+
+依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+</dependency>
+```
+
+yml配置 服务提供者和服务消费者一样配置(name不同)
+
+```yaml
+server:
+  port: 8006
+spring:
+  application:
+    name: consul-provider-payment
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        service-name: ${spring.application.name}
+```
+
+主启动类注解
+
+```java
+@EnableDiscoveryClient
+```
+
+## Ribbon
+
+是一套客户端:用在用户界面的module,负载均衡工具,本地负载均衡
+
+依赖,eureka中携带ribbon
+
+```xml
+<!--eureka client-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+```
+
+修改负载均衡方式
+
+配置不能放在ComponentScan能扫描到的包下面
+
+```java
+@Configuration
+public class MySelfRule {
+    
+    @Bean
+    public IRule myRule() {
+        return new RandomRule(); //定义为随机
+    }
+}
+```
+
+主启动类配置 name中大小写必须一致 (可能小写可以,也可能大写可以,未看源码,不知道原因)
+
+```java
+@RibbonClient(name = "CLOUD-PAYMEN-SERVICE",configuration = MySelfRule.class)
+```
+
+原子类(需要研究一下)
+
+自旋锁()
+
+OpenFeign使用
+
+在接口上加上注解就可以使用
+
+## feigen是用在消费端
+
+依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+
+注解
+
+```java
+@EnableFeignClients
+```
+
+使用,GET方法必须加上RequestParam不然会自动给你转成post请求(都是泪)
+
+```java
+@Component
+@FeignClient(value = "CLOUD-PAYMEN-SERVICE")
+public interface PaymentFeignService {
+
+    @GetMapping("/payment/inquiry")
+    public CommonResult getEntity(@RequestParam("id") Long id);
+}
+
+```
+
+自带负载均衡功能
+
+超时设置: 在客户端设置
+
+默认1秒
+
+yml配置
+
+```yaml
+#设置feign客户端查实时间(默认支持ribbon)
+ribbon:
+  #  指的是建立连接后从服务器读取到可用资源所用的时间
+  ReadTimeout:  5000
+  #  指的是建立连接所用的时间,适用于网络状况正产的情况下,两端连接所用的时间
+  ConnectTimeout: 5000
+```
+
+日志配置
+
+在客户端配置
+
+config配置
+
+```java
+@Configuration
+public class FeignConfig {
+
+    @Bean
+    Logger.Level feignLoggerLevel() {
+        return Logger.Level.FULL;
+    }
+}
+```
+
+yml配置
+
+```yaml
+logging:
+  level:
+    com.xybbz.service.PaymentFeignService: debug
+```
+
+## Hystrix
+
+服务降级,服务熔断,接近实时的监控,有兜底解决方案,开关装置
+
+依赖
+
+```xml
+<!--新增hystrix-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+
+yml配置和eureka一致即可
+
+暂停线程
+
+```java
+TimeUnit.SECONDS.sleep(3);
+```
+
+jmeter压力测试软件
+
+一般都是用在消费端
+
+依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+
 
