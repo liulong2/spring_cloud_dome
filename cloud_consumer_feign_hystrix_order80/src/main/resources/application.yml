@@ -1,0 +1,20 @@
+
+server:
+  port: 80
+
+spring:
+  application:
+    name: cloud-provider-hystrix-order
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: true
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/
+
+#设置feign客户端查实时间(默认支持ribbon)
+ribbon:
+  #  指的是建立连接后从服务器读取到可用资源所用的时间
+  ReadTimeout:  5000
+  #  指的是建立连接所用的时间,适用于网络状况正产的情况下,两端连接所用的时间
+  ConnectTimeout: 5000
