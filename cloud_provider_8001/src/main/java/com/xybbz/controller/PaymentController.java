@@ -41,7 +41,7 @@ public class PaymentController {
     @Resource
     private DiscoveryClient discoveryClient;
 
-    @PostMapping("/insert")
+    @PostMapping("/lb/insert")
     public CommonResult create(@RequestBody Payment payment) {
         boolean result = paymentService.save(payment);
         log.info(MessageFormat.format("****插入结果{0}",result));
@@ -50,7 +50,7 @@ public class PaymentController {
     }
 
 
-    @GetMapping("/inquiry")
+    @GetMapping("/get/inquiry")
     public CommonResult getEntity(Long id) {
         Payment payment = paymentService.getById(id);
         int age = 1/10;
@@ -63,7 +63,7 @@ public class PaymentController {
     }
 
 
-    @GetMapping("/discovery")
+    @GetMapping("/lb/discovery")
     public Object discovery() {
         List<String> services = discoveryClient.getServices();
         services.forEach(string ->{

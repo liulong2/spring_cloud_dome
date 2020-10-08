@@ -11,3 +11,10 @@ eureka:
 spring:
   application:
     name: cloud-provider-hystrix-payment
+
+
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: /actuator/hystrix.stream
