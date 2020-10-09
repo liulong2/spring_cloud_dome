@@ -52,6 +52,7 @@ public class PaymentController {
 
     @GetMapping("/get/inquiry")
     public CommonResult getEntity(Long id) {
+        id = 31L;
         Payment payment = paymentService.getById(id);
         int age = 1/10;
         if ( !StringUtils.isEmpty(payment)) {

@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.MessageFormat;
+import java.time.ZonedDateTime;
 
 /**
  * <p>
@@ -30,7 +31,7 @@ public class PaymentController {
     @Value("${server.port}")
     private String serverPort;
 
-    @PostMapping("/insert")
+    @PostMapping("/lb/insert")
     public CommonResult create(@RequestBody Payment payment) {
         boolean result = paymentService.save(payment);
         log.info(MessageFormat.format("****插入结果{0}",result));
@@ -39,8 +40,9 @@ public class PaymentController {
     }
 
 
-    @GetMapping("/inquiry")
+    @GetMapping("/get/inquiry")
     public CommonResult getEntity(Long id) {
+        id = 31L;
         Payment payment = paymentService.getById(id);
         int age = 1/10;
         if ( !StringUtils.isEmpty(payment)) {
@@ -49,6 +51,11 @@ public class PaymentController {
         else {
             return  new CommonResult(500,"查询失败",null);
         }
+    }
+
+    public static void main(String[] args) {
+        ZonedDateTime now = ZonedDateTime.now();
+        System.out.println(now);
     }
 
 }
