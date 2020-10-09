@@ -449,4 +449,191 @@ jmeter压力测试软件
 </dependency>
 ```
 
+#### 服务降级
 
+8001上service中方法添加注解
+
+```java
+//添加熔断注解,fallbackMethod 表示兜底方法
+@HystrixCommand(fallbackMethod = "payMentInfo_TimeoutHandler", commandProperties = {
+        @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds",value = "3000")
+})
+```
+
+兜底方法
+
+```java
+public String payMentInfo_TimeoutHandler(Integer id) {
+    return "线程池: " + Thread.currentThread().getName() + " payMentInfo_TimeoutHandler" + id + "你超时死了";
+}
+```
+
+主启动类添加
+
+```java
+@EnableCircuitBreaker
+```
+
+客户端80
+
+配置yml 这样用是因为使用feign集成hystrix 添加这条配置会出现永远走兜底
+
+```yaml
+feign:
+  hystrix:
+    enabled: true
+```
+
+设置feigen的超时时间后需要设置hystrix超时时间
+
+```java
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 10000
+```
+
+
+
+配置feign实现类也可以默认获得服务兜底的形式
+
+实现业务与逻辑解耦
+
+```java
+@FeignClient(value = "CLOUD-PROVIDER-HYSTRIX-PAYMENT",fallback = PaymentFallbackService.class)
+```
+
+实现类
+
+```java
+@Component
+public class PaymentFallbackService implements PaymentHystrixService {
+    @Override
+    public String payMentInfo_OK(Integer id) {
+        return "服务失败了,你个大傻子:payMentInfo_OK ";
+    }
+
+    @Override
+    public String payMentInfo_timOut(Integer id) {
+        return "服务失败了,你个大傻子: payMentInfo_timOut";
+    }
+}
+```
+
+主启动类
+
+```java
+@EnableHystrix
+```
+
+配置全局的fallback兜底,加在类上
+
+```java
+@DefaultProperties(defaultFallback = "payment_Global_FallbackMethod")
+```
+
+方法上必须加
+
+```java
+@HystrixCommand
+```
+
+#### 服务熔断
+
+应对雪崩效应的一种微服务保护机制
+
+```java
+@HystrixCommand(fallbackMethod = "paymentCircuitBreaker_fallback",commandProperties = {
+        @HystrixProperty(name = "circuitBreaker.enabled",value = "true"),//是否开启断路器
+        @HystrixProperty(name = "circuitBreaker.requestVolumeThreshold",value = "10"), //请求次数
+        @HystrixProperty(name = "circuitBreaker.sleepWindowInMilliseconds", value = "10000"),//时间窗口期重试睡眠多久
+        @HystrixProperty(name = "circuitBreaker.errorThresholdPercentage", value = "60")//失败率打到多少后跳闸
+})
+```
+
+默认配置在HystrixCommandProperties文件中
+
+##### 图形化界面
+
+依赖
+
+```xml
+<!--新增hystrix dashboard-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix-dashboard</artifactId>
+</dependency>
+```
+
+主启动类注解
+
+```java
+@EnableHystrixDashboard
+```
+
+所有要用的微服务包里都需要依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+### Gateway
+
+反向代理,鉴权,流量控制,熔断,日志监控
+
+路由,断言,过滤
+
+依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+```
+
+
+
+第一种配置
+
+yml配置
+
+```yaml
+spring:
+  application:
+    name: cloud-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: payment_routh #路由的ID，没有固定规则但要求唯一，建议配合服务名
+          uri: http://localhost:8001   #匹配后提供服务的路由地址
+          predicates:
+            - Path=/payment/get/**   #断言,路径相匹配的进行路由
+
+        - id: payment_routh2
+          uri: http://localhost:8001
+          predicates:
+            - Path=/payment/lb/**   #断言,路径相匹配的进行路由
+```
+
+第二种配置
+
+```java
+@Configuration
+public class GateWayConfig {
+    @Bean
+    public RouteLocator customRouteLocator(RouteLocatorBuilder routeLocatorBuilder) {
+        RouteLocatorBuilder.Builder routes = routeLocatorBuilder.routes();
+        routes.route("path_route_xybbz",r -> r.path("/guonei").uri("http://news.baidu.com/guonei"));
+        return routes.build();
+    }
+}
+```
+
+gateway和springmvc会发生冲突
