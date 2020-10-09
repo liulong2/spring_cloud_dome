@@ -637,3 +637,196 @@ public class GateWayConfig {
 ```
 
 gateway和springmvc会发生冲突
+
+动态路由
+
+```yaml
+spring:
+  application:
+    name: cloud-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true #开启从注册中心动态创建路由的功能,利用微服务名进行路由
+      routes:
+        - id: payment_routh #路由的ID，没有固定规则但要求唯一，建议配合服务名
+#            uri: http://localhost:8001   #匹配后提供服务的路由地址
+            uri: lb://cloud-paymen-service   #匹配后提供服务的路由地址
+            predicates:
+              - Path=/payment/get/**   #断言,路径相匹配的进行路由
+
+        - id: payment_routh2
+#          uri: http://localhost:8001
+          uri: http://lb://cloud-paymen-service
+          predicates:
+            - Path=/payment/lb/**   #断言,路径相匹配的进行路由
+```
+
+使用curl测试
+
+```yaml
+   routes:
+        - id: payment_routh #路由的ID，没有固定规则但要求唯一，建议配合服务名
+#            uri: http://localhost:8001   #匹配后提供服务的路由地址
+          uri: lb://cloud-paymen-service   #匹配后提供服务的路由地址
+          predicates:
+            - Path=/payment/get/**   #断言,路径相匹配的进行路由
+            - After=2020-10-08T22:21:49.166+08:00[Asia/Shanghai]
+            - Cookie=username,zzyy
+```
+
+```cmd
+curl http://localhost:9527/payment/get/inquiry?id=31 --cookie "username=zzyy"
+```
+
+#### Filter 
+
+写的样板
+
+```java
+@Component
+@Slf4j
+public class MyLogGateWayFilter implements GlobalFilter, Ordered {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        log.info(MessageFormat.format("*******************lalalal {}",new Date()));
+        String uname = exchange.getRequest().getQueryParams().getFirst("uname");
+        if (uname ==null) {
+            log.info("用户为null");
+            exchange.getResponse().setStatusCode(HttpStatus.NOT_ACCEPTABLE);
+            return exchange.getResponse().setComplete();
+        }
+
+        return chain.filter(exchange);
+    }
+
+    //过滤器加载顺序,数越小优先级越高
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+}
+```
+
+## Config
+
+集中的动态管理配置文件
+
+依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-server</artifactId>
+</dependency>
+```
+
+#### 服务端
+
+yml配置
+
+```yaml
+server:
+  port: 3344
+spring:
+  application:
+    name: cloud-config-center
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/liulong2/springcloud-donfig.git #填写你自己的github路径
+#          搜索目录
+          search-paths:
+            - springcloud-config
+          username: liulong2
+          password: 03145215lL
+      #        读取分支
+      label: master
+eureka:
+  client:
+    service-url:
+      defaultZone:  http://localhost:7001/eureka
+```
+
+主启动类
+
+访问方式
+
+```java
+@EnableConfigServer
+```
+
+http://config-3344.com:3344/main/config-dev.yml
+
+#### 客户端
+
+依赖
+
+```xml
+dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-config</artifactId>
+</dependency>
+```
+
+bootstrap.yml比application.yml加载的优先级更高
+
+bootstrap.yml配置(被人的笔记误导了少写了个字母r,找了一个小时)
+
+```yaml
+server:
+  port: 3355
+
+spring:
+  application:
+    name: config-client
+  cloud:
+#    Config客户端配置
+    config:
+      label: main #分支名称
+      name: config  #配置文件名称
+      profile: dev  #配置文件后缀
+      uri: http://localhost:3344 #配置中心地址
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka
+```
+
+#### 动态刷新
+
+需要
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+yml配置
+
+```yaml
+#暴露监控端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: 
+```
+
+注解
+
+```java
+@RefreshScope
+```
+
+注在class上
+
+
+
+必须走一下post请求刷新一下
+
+http://localhost:3355/actuator/refresh
